@@ -13,6 +13,7 @@ from transformers import (
     CTRLTokenizer,
     GPT2LMHeadModel,
     GPT2Tokenizer,
+    GPTNeoForCausalLM,
     OpenAIGPTLMHeadModel,
     OpenAIGPTTokenizer,
     TransfoXLLMHeadModel,
@@ -35,6 +36,7 @@ MAX_LENGTH = int(10000)  # Hardcoded max length to avoid infinite loop
 
 MODEL_CLASSES = {
     "gpt2": (GPT2LMHeadModel, GPT2Tokenizer),
+    "gpt-neo": (GPTNeoForCausalLM, GPT2Tokenizer),
     "ctrl": (CTRLLMHeadModel, CTRLTokenizer),
     "openai-gpt": (OpenAIGPTLMHeadModel, OpenAIGPTTokenizer),
     "xlnet": (XLNetLMHeadModel, XLNetTokenizer),
@@ -153,7 +155,7 @@ def main():
     )
 
     parser.add_argument("--prompt", type=str, default="")
-    parser.add_argument("--length", type=int, default=20)
+    parser.add_argument("--length", type=int, default=15)
     parser.add_argument("--stop_token", type=str, default=None, help="Token at which text generation is stopped")
 
     parser.add_argument(
@@ -174,7 +176,7 @@ def main():
 
     parser.add_argument("--seed", type=int, default=42, help="random seed for initialization")
     parser.add_argument("--no_cuda", action="store_true", help="Avoid using CUDA when available")
-    parser.add_argument("--num_return_sequences", type=int, default=1, help="The number of samples to generate.")
+    parser.add_argument("--num_return_sequences", type=int, default=5, help="The number of samples to generate.")
     parser.add_argument(
         "--fp16",
         action="store_true",
@@ -206,7 +208,31 @@ def main():
     args.length = adjust_length_to_model(args.length, max_sequence_length=model.config.max_position_embeddings)
     logger.info(args)
 
-    prompt_text = args.prompt if args.prompt else input("Model prompt >>> ")
+    # prompt_text = args.prompt if args.prompt else input("Model prompt >>> ")
+    prompt_text = """
+    Tweet: "I hate it when my phone battery dies."
+    Sentiment: Negative
+    ###
+    Tweet: "My day has been 👍"
+    Sentiment: Positive
+    ###
+    Tweet: "This is the link to the article"
+    Sentiment: Neutral
+    ###
+    Tweet: "This new music video was shit at the beginning, but at the end was an amazing full piece"
+    Sentiment:"""
+
+    prompt_text = """Q: Fetch the departments that have less than five people in it.
+    A: SELECT DEPARTMENT, COUNT(WOKRED_ID) as "Number of Workers" FROM Worker GROUP BY DEPARTMENT HAVING COUNT(WORKED_ID) < 5;
+    ###
+    Q: Show all departments along with the number of people in each department
+    A: SELECT DEPARTMENT, COUNT(DEPARTMENT) as "Number of Workers" FROM Worker GROUP BY DEPARTMENT;
+    ###
+    Q: Show the last record of the Worker table
+    A: SELECT * FROM Worker ORDER BY LAST_NAME DESC LIMIT 1;
+    ###
+    Q: Fetch the four max salaries from the Worker table;
+    A:"""
 
     # Different models need different input formatting and/or extra arguments
     requires_preprocessing = args.model_type in PREPROCESSING_FUNCTIONS.keys()
